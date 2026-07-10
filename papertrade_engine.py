@@ -1,4 +1,3 @@
-
 import datetime
 import os
 import time
@@ -29,7 +28,7 @@ st.markdown(
 )
 
 st.title("📝 ज़ीरो-हीरो पेपर ट्रेड प्रो v14.0")
-st.markdown("##### (CSV Storage Lock Engine 🔒 - Screen Reset-Proof Paper Trading)")
+st.markdown("##### (Rigid Toggle Lock Engine 🔒 - Screen Reset-Proof Paper Trading)")
 st.markdown("---")
 
 # CSV File Path setup for Render Persistence
@@ -70,6 +69,10 @@ if "active_position" not in st.session_state: st.session_state.active_position =
 if "last_valid_price" not in st.session_state: st.session_state.last_valid_price = 24000.00
 if "last_trade_time" not in st.session_state: st.session_state.last_trade_time = datetime.datetime.min
 if "obj" not in st.session_state: st.session_state.obj = None
+
+# LOAD TOGGLE FROM HARD STATE TO PREVENT DROP 🔒
+if "bot_active" not in st.session_state: 
+    st.session_state.bot_active = False
 
 # Load permanent history from CSV into session memory if available
 permanent_records = load_permanent_trades()
@@ -150,7 +153,8 @@ demand_level = round(df_calc["Demand_Zone"].iloc[-1], 2)
 high_volume_node = df_calc["Volume"].iloc[-1] > df_calc["Avg_Volume"].iloc[-1]
 
 with control_container:
-    bot_active = st.toggle("⚡ ACTIVATE ALGO ENGINE (लाइव कंबाइंड स्कैनिंग स्विच ऑन करें)", value=st.session_state.get("bot_active", False))
+    # 🔒 SESSION LOCK VALUE ASSIGNMENT
+    bot_active = st.toggle("⚡ ACTIVATE ALGO ENGINE (लाइव कंबाइंड स्कैनिंग स्विच ऑन करें)", key="bot_active_toggle", value=st.session_state.bot_active)
     st.session_state.bot_active = bot_active
 
 with metric_container:
@@ -218,28 +222,25 @@ with pos_container:
             st.rerun()
     else:
         if st.session_state.bot_active:
-            time_since_last_trade = (datetime.datetime.now() - st.session_state.last_trade_time).total_seconds()
-            if time_since_last_trade < 30:
-                st.warning(f"⏳ कूलडाउन सुरक्षा एक्टिव है... {int(30 - time_since_last_trade)} सेकंड प्रतीक्षा करें।")
-            else:
-                strike_round = int(round(live_price / 50.0) * 50)
-                qty = FINAL_QTY if FINAL_QTY > 0 else 25
-                
-                # 🟢 CALL ENTRY (Breakout OR Velocity Burst)
-                if (live_price > ema_50 and live_price > supply_level) or (price_change_velocity >= 15.0 and high_volume_node):
-                    st.session_state.active_position = {
-                        "type": "CE", "strike": f"NIFTY {strike_round} CE", "qty": qty, 
-                        "entry": live_price, "sl": live_price - 12.0, "stage": 0, "strat": "Velocity CE Burst"
-                    }
-                    st.rerun()
-                        
-                # 🔴 PUT ENTRY (Breakdown OR Velocity Crash)
-                elif (live_price < ema_50 and live_price < demand_level) or (price_change_velocity <= -15.0 and high_volume_node):
-                    st.session_state.active_position = {
-                        "type": "PE", "strike": f"NIFTY {strike_round} PE", "qty": qty, 
-                        "entry": live_price, "sl": live_price + 12.0, "stage": 0, "strat": "Velocity PE Crash"
-                    }
-                    st.rerun()
+            st.info("⚡ Velocity Confluence Matrix Active: Scanning for high probability setups...")
+            strike_round = int(round(live_price / 50.0) * 50)
+            qty = FINAL_QTY if FINAL_QTY > 0 else 25
+            
+            # 🟢 CALL ENTRY (Breakout OR Velocity Burst)
+            if (live_price > ema_50 and live_price > supply_level) or (price_change_velocity >= 15.0 and high_volume_node):
+                st.session_state.active_position = {
+                    "type": "CE", "strike": f"NIFTY {strike_round} CE", "qty": qty, 
+                    "entry": live_price, "sl": live_price - 12.0, "stage": 0, "strat": "Velocity CE Burst"
+                }
+                st.rerun()
+                    
+            # 🔴 PUT ENTRY (Breakdown OR Velocity Crash)
+            elif (live_price < ema_50 and live_price < demand_level) or (price_change_velocity <= -15.0 and high_volume_node):
+                st.session_state.active_position = {
+                    "type": "PE", "strike": f"NIFTY {strike_round} PE", "qty": qty, 
+                    "entry": live_price, "sl": live_price + 12.0, "stage": 0, "strat": "Velocity PE Crash"
+                }
+                st.rerun()
         else:
             st.info("💤 सिस्टम अभी स्टैंडबाय मोड पर शांत बैठा है भाई। स्कैनिंग शुरू करने के लिए स्विच ON कर दीजिए!")
 
